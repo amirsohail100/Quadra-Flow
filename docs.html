@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QuadraFlow Docs</title> <!-- Final title data.js se set hota hai -->
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body data-theme="dark">
+
+    <canvas id="bgCanvas"></canvas>
+
+    <!-- Theme Toggle Button (Bottom Right) -->
+    <button id="themeToggleBtn" class="icon-btn theme-btn" aria-label="Toggle Theme">
+        <i class="fa-solid fa-moon"></i>
+    </button>
+
+    <!-- Navbar (content: data.js -> site, nav) -->
+    <nav class="navbar-container" id="navbarRoot"></nav>
+
+    <!-- Docs Main Layout -->
+    <div class="docs-container">
+        <!-- Sidebar (content: data.js -> docs.groups) -->
+        <aside class="docs-sidebar" id="docsSidebar"></aside>
+
+        <!-- Documentation Content (content: data.js -> docs.groups[].sections) -->
+        <main class="docs-content" id="docsContent"></main>
+    </div>
+
+    <!-- Footer (content: data.js -> site.footer) -->
+    <footer id="siteFooter"></footer>
+
+    <script src="data.js"></script>
+    <script src="render.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
