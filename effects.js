@@ -490,7 +490,435 @@
         };
     }
 
-    const VISUALS = { neuralnet: neuralNet, kmeans: kMeans };
+    /* ==================================================================
+       Shared helpers for the algorithm visuals
+       ================================================================== */
+    const TAU = Math.PI * 2;
+    const ease = (t) => (t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2);
+    const gaussR = () => { let u = 0, v = 0; while (!u) u = Math.random(); while (!v) v = Math.random(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(TAU * v); };
+    const rand = (a, b) => a + Math.random() * (b - a);
+
+    const CUBE = (() => {
+        const c = [];
+        for (const x of [-1, 1]) for (const y of [-1, 1]) for (const z of [-1, 1]) c.push([x, y, z]);
+        const e = [];
+        for (let i = 0; i < 8; i++) for (let j = i + 1; j < 8; j++) {
+            const d = (c[i][0] !== c[j][0]) + (c[i][1] !== c[j][1]) + (c[i][2] !== c[j][2]);
+            if (d === 1) e.push([i, j]);
+        }
+        return { c, e };
+    })();
+
+    function cubeWire(st, s, a) {
+        const ctx = st.ctx, P = st.pal;
+        const pr = CUBE.c.map((c) => st.project(c[0] * s, c[1] * s, c[2] * s));
+        ctx.lineWidth = 1;
+        CUBE.e.forEach(([i, j]) => {
+            ctx.strokeStyle = `rgba(${P.dim},${((a || 0.16) * st.depthAlpha((pr[i].z + pr[j].z) / 2)).toFixed(3)})`;
+            ctx.beginPath(); ctx.moveTo(pr[i].x, pr[i].y); ctx.lineTo(pr[j].x, pr[j].y); ctx.stroke();
+        });
+    }
+
+    function disc(ctx, q, r, rgb, alpha) {
+        ctx.fillStyle = `rgba(${rgb},${alpha.toFixed(3)})`;
+        ctx.beginPath(); ctx.arc(q.x, q.y, r, 0, TAU); ctx.fill();
+    }
+
+    function rotateLabel(panel) {
+        const lab = document.createElement('div');
+        lab.className = 'viz-label'; lab.textContent = 'move your cursor to rotate';
+        panel.appendChild(lab);
+    }
+
+    /* ==================================================================
+       VISUAL 3 : RANDOM FOREST  (ensemble learning - 5 trees vote)
+       ================================================================== */
+    function forest(st, panel) {
+        st.zoom = 0.255;
+        const T = 5, R = 1.1, CYCLE = 6.2;
+        const offs = [[0], [-0.2, 0.2], [-0.33, -0.11, 0.11, 0.33]];
+        const edges = [[0, 1], [0, 2], [1, 3], [1, 4], [2, 5], [2, 6]];
+        const names = ['A', 'B', 'C'];
+        const trees = [];
+        for (let i = 0; i < T; i++) {
+            const th = (i / T) * TAU, rx = Math.cos(th), rz = Math.sin(th), tx = -rz, tz = rx, nodes = [];
+            offs.forEach((arr, l) => arr.forEach((o) => nodes.push({ x: rx * R + tx * o, y: -0.55 + l * 0.5, z: rz * R + tz * o })));
+            trees.push({ nodes, path: [0, 1, 3], cls: 0 });
+        }
+        const hub = { x: 0, y: 0.15, z: 0 };
+        let t = 0, truth = 0, lastKey = '';
+
+        const hud = hudBox(panel, '<div>Random Forest <i>(illustrative)</i></div><div>trees <b>5</b></div><div>votes <b data-k="v">-</b></div><div>prediction <b data-k="p">?</b></div>');
+        const kV = hud.querySelector('[data-k="v"]'), kP = hud.querySelector('[data-k="p"]');
+        rotateLabel(panel);
+
+        function newRound() {
+            t = 0; truth = Math.floor(Math.random() * 3);
+            trees.forEach((tr) => {
+                const m = Math.random() < 0.5 ? 1 : 2;
+                tr.path = [0, m, (m === 1 ? 3 : 5) + (Math.random() < 0.5 ? 0 : 1)];
+                tr.cls = Math.random() < 0.72 ? truth : (truth + 1 + Math.floor(Math.random() * 2)) % 3;
+            });
+        }
+        newRound();
+
+        return {
+            draw(dt) {
+                const ctx = st.ctx, P = st.pal, cols = [P.a, P.b, P.c];
+                t += dt; if (t > CYCLE) newRound();
+
+                const pr = trees.map((tr) => tr.nodes.map((n) => st.project(n.x, n.y, n.z)));
+                const hp = st.project(hub.x, hub.y, hub.z);
+                const counts = [0, 0, 0], items = [];
+
+                trees.forEach((tr, i) => {
+                    const u = t - (0.3 + i * 0.45);
+                    const desc = clamp(u / 1.0, 0, 1), toHub = clamp((u - 1.0) / 0.7, 0, 1);
+                    if (toHub >= 1) counts[tr.cls]++;
+                    const col = cols[tr.cls], N = pr[i];
+
+                    /* tree skeleton */
+                    ctx.lineWidth = 1;
+                    edges.forEach(([a, b]) => {
+                        ctx.strokeStyle = `rgba(${P.dim},${(0.2 * st.depthAlpha((N[a].z + N[b].z) / 2)).toFixed(3)})`;
+                        ctx.beginPath(); ctx.moveTo(N[a].x, N[a].y); ctx.lineTo(N[b].x, N[b].y); ctx.stroke();
+                    });
+                    /* lit decision path */
+                    if (u > 0) {
+                        ctx.strokeStyle = `rgba(${col},0.9)`; ctx.lineWidth = 2.2;
+                        for (let s = 0; s < 2; s++) {
+                            const sp = clamp(desc * 2 - s, 0, 1); if (sp <= 0) continue;
+                            const A = N[tr.path[s]], B = N[tr.path[s + 1]];
+                            ctx.beginPath(); ctx.moveTo(A.x, A.y); ctx.lineTo(A.x + (B.x - A.x) * sp, A.y + (B.y - A.y) * sp); ctx.stroke();
+                        }
+                    }
+                    /* leaf -> hub link + pulse */
+                    const leaf = N[tr.path[2]];
+                    if (toHub > 0) {
+                        ctx.strokeStyle = `rgba(${col},0.22)`; ctx.lineWidth = 1;
+                        ctx.beginPath(); ctx.moveTo(leaf.x, leaf.y); ctx.lineTo(hp.x, hp.y); ctx.stroke();
+                    }
+                    /* nodes */
+                    N.forEach((q, ni) => {
+                        const isLeaf = ni === tr.path[2], lit = isLeaf && desc >= 1;
+                        items.push({ z: q.z, q, r: (lit ? 6 : 3.4) * q.s, rgb: lit ? col : P.dim, a: lit ? 0.95 : 0.55, glow: lit });
+                    });
+                    /* pulses */
+                    if (desc > 0 && desc < 1) {
+                        const si = desc < 0.5 ? 0 : 1, lt = desc < 0.5 ? desc * 2 : desc * 2 - 1;
+                        const A = N[tr.path[si]], B = N[tr.path[si + 1]];
+                        items.push({ z: (A.z + B.z) / 2 - 0.02, q: { x: A.x + (B.x - A.x) * lt, y: A.y + (B.y - A.y) * lt, s: A.s }, r: 4.5 * A.s, rgb: col, a: 1, glow: true, pulse: true });
+                    }
+                    if (toHub > 0 && toHub < 1) {
+                        items.push({ z: (leaf.z + hp.z) / 2 - 0.02, q: { x: leaf.x + (hp.x - leaf.x) * toHub, y: leaf.y + (hp.y - leaf.y) * toHub, s: leaf.s }, r: 4.5 * leaf.s, rgb: col, a: 1, glow: true, pulse: true });
+                    }
+                });
+
+                /* hub = the voting result */
+                const total = counts[0] + counts[1] + counts[2];
+                let maj = 0; counts.forEach((c, k) => { if (c > counts[maj]) maj = k; });
+                items.push({ z: hp.z, q: hp, r: (9 + total * 2.2) * hp.s, rgb: total ? cols[maj] : P.dim, a: total ? 0.95 : 0.5, glow: true, hub: true });
+
+                items.sort((a, b) => b.z - a.z);
+                items.forEach((it) => {
+                    const da = st.depthAlpha(it.z);
+                    if (it.glow) glowDot(ctx, it.q.x, it.q.y, it.r, it.rgb, (it.hub ? 0.55 : 0.6) * da);
+                    disc(ctx, it.q, it.r, it.rgb, it.a * (it.pulse ? 1 : da));
+                    if (it.hub) { ctx.strokeStyle = `rgba(${P.ink},0.5)`; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(it.q.x, it.q.y, it.r + 4, 0, TAU); ctx.stroke(); }
+                });
+
+                const key = counts.join(',');
+                if (key !== lastKey) {
+                    lastKey = key;
+                    kV.textContent = total ? counts.map((c, k) => names[k] + ':' + c).join('  ') : '-';
+                    kP.textContent = total === T ? 'class ' + names[maj] : '?';
+                }
+            }
+        };
+    }
+
+    /* ==================================================================
+       VISUAL 4 : PCA  (3D cloud flattens onto its principal plane)
+       ================================================================== */
+    function pcaVisual(st, panel) {
+        st.zoom = 0.21;
+        const sig = [0.95, 0.42, 0.13], CYCLE = 8;
+        const norm = (v) => { const l = Math.hypot(v[0], v[1], v[2]); return [v[0] / l, v[1] / l, v[2] / l]; };
+        const dot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+        const e1 = norm([0.8, 0.35, 0.5]);
+        let e2 = [-0.3, 0.9, -0.2]; const d12 = dot(e2, e1); e2 = norm([e2[0] - d12 * e1[0], e2[1] - d12 * e1[1], e2[2] - d12 * e1[2]]);
+        const e3 = [e1[1] * e2[2] - e1[2] * e2[1], e1[2] * e2[0] - e1[0] * e2[2], e1[0] * e2[1] - e1[1] * e2[0]];
+        const at = (a, b, c) => [e1[0] * a + e2[0] * b + e3[0] * c, e1[1] * a + e2[1] * b + e3[1] * c, e1[2] * a + e2[2] * b + e3[2] * c];
+
+        const pts = [];
+        for (let i = 0; i < 170; i++) {
+            const a = clamp(gaussR() * sig[0], -1.6, 1.6), b = clamp(gaussR() * sig[1], -0.8, 0.8), c = clamp(gaussR() * sig[2], -0.3, 0.3);
+            pts.push({ a, b, c, g: a < -0.35 ? 0 : a > 0.35 ? 2 : 1 });
+        }
+        const kept = ((sig[0] ** 2 + sig[1] ** 2) / (sig[0] ** 2 + sig[1] ** 2 + sig[2] ** 2) * 100).toFixed(1);
+
+        const hud = hudBox(panel, '<div>PCA <i>(illustrative)</i></div><div>dims <b>3 → 2</b></div><div>variance kept <b>' + kept + '%</b></div><div>stage <b data-k="s">original</b></div>');
+        const kS = hud.querySelector('[data-k="s"]');
+        rotateLabel(panel);
+        let t = 0, lastS = '';
+
+        return {
+            draw(dt) {
+                const ctx = st.ctx, P = st.pal, cols = [P.a, P.b, P.c];
+                t += dt; if (t > CYCLE) t = 0;
+                const m = t < 1.4 ? 0 : t < 3.4 ? ease((t - 1.4) / 2) : t < 6 ? 1 : t < 7.6 ? 1 - ease((t - 6) / 1.6) : 0;
+                const axA = clamp(t / 1.2, 0, 1);
+                const stage = m >= 1 ? 'projected' : m > 0 ? (t < 5 ? 'projecting' : 'restoring') : 'original';
+                if (stage !== lastS) { lastS = stage; kS.textContent = stage; }
+
+                cubeWire(st, 1.4, 0.12);
+
+                /* principal plane (PC1 x PC2) */
+                const q = [[1.5, 0.85], [1.5, -0.85], [-1.5, -0.85], [-1.5, 0.85]].map(([a, b]) => { const v = at(a, b, 0); return st.project(v[0], v[1], v[2]); });
+                ctx.fillStyle = `rgba(${P.a},${(0.05 + 0.08 * m).toFixed(3)})`;
+                ctx.strokeStyle = `rgba(${P.a},${(0.18 + 0.4 * m).toFixed(3)})`; ctx.lineWidth = 1.2;
+                ctx.beginPath(); q.forEach((p, i) => (i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y))); ctx.closePath(); ctx.fill(); ctx.stroke();
+
+                /* principal axes */
+                ctx.font = '600 11px "Fira Code", monospace'; ctx.textAlign = 'center';
+                [[1.6, 0], [1.0, 1], [0.55, 2]].forEach(([L, k]) => {
+                    const d = [[1, 0, 0], [0, 1, 0], [0, 0, 1]][k];
+                    const p0 = at(-d[0] * L, -d[1] * L, -d[2] * L), p1 = at(d[0] * L, d[1] * L, d[2] * L);
+                    const a = st.project(p0[0], p0[1], p0[2]), b = st.project(p1[0], p1[1], p1[2]);
+                    const al = axA * (k === 2 ? 1 - 0.65 * m : 0.9);
+                    ctx.strokeStyle = `rgba(${cols[k]},${al.toFixed(3)})`; ctx.lineWidth = 2;
+                    ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+                    ctx.fillStyle = `rgba(${cols[k]},${al.toFixed(3)})`;
+                    ctx.fillText('PC' + (k + 1), b.x, b.y - 8);
+                });
+
+                /* points */
+                const items = pts.map((p) => {
+                    const v = at(p.a, p.b, p.c * (1 - m));
+                    return { z: 0, p, q: st.project(v[0], v[1], v[2]), v0: at(p.a, p.b, p.c) };
+                });
+                items.forEach((it) => { it.z = it.q.z; });
+                if (m > 0 && m < 1) {
+                    ctx.lineWidth = 0.7;
+                    items.forEach((it) => {
+                        const o = st.project(it.v0[0], it.v0[1], it.v0[2]);
+                        ctx.strokeStyle = `rgba(${cols[it.p.g]},0.18)`;
+                        ctx.beginPath(); ctx.moveTo(o.x, o.y); ctx.lineTo(it.q.x, it.q.y); ctx.stroke();
+                    });
+                }
+                items.sort((a, b) => b.z - a.z);
+                items.forEach((it) => disc(ctx, it.q, 3.2 * it.q.s, cols[it.p.g], 0.9 * st.depthAlpha(it.z)));
+            }
+        };
+    }
+
+    /* ==================================================================
+       VISUAL 5 : DBSCAN  (density-based clusters + noise)
+       ================================================================== */
+    function dbscanVisual(st, panel) {
+        st.zoom = 0.24;
+        const EPS = 0.26, MINPTS = 4, STEP = 0.04;
+        const pts = [];
+        for (let i = 0; i < 64; i++) {            // tilted ring
+            const th = (i / 64) * TAU + rand(-0.04, 0.04), r = 0.72 + gaussR() * 0.035;
+            pts.push({ x: -0.5 + r * Math.cos(th) + gaussR() * 0.03, y: -0.05 + r * Math.sin(th) * 0.5 + gaussR() * 0.03, z: r * Math.sin(th) * 0.87 + gaussR() * 0.03 });
+        }
+        for (let i = 0; i < 64; i++) pts.push({ x: 0.75 + gaussR() * 0.2, y: 0.1 + gaussR() * 0.2, z: 0.1 + gaussR() * 0.2 });
+        for (let i = 0; i < 20; i++) pts.push({ x: rand(-1.1, 1.1), y: rand(-1.1, 1.1), z: rand(-1.1, 1.1) });
+
+        /* real DBSCAN, run once; `order` = the order points get claimed by a cluster */
+        const n = pts.length, label = new Array(n).fill(-1), vis = new Array(n).fill(false), order = [];
+        const region = (i) => { const r = []; for (let j = 0; j < n; j++) if (Math.hypot(pts[i].x - pts[j].x, pts[i].y - pts[j].y, pts[i].z - pts[j].z) <= EPS) r.push(j); return r; };
+        let cid = -1;
+        for (let i = 0; i < n; i++) {
+            if (vis[i]) continue; vis[i] = true;
+            const nb = region(i); if (nb.length < MINPTS) continue;
+            cid++; label[i] = cid; order.push(i);
+            const queue = nb.slice();
+            while (queue.length) {
+                const j = queue.shift();
+                if (label[j] === -1) { label[j] = cid; order.push(j); }
+                if (vis[j]) continue; vis[j] = true;
+                const nj = region(j);
+                if (nj.length >= MINPTS) nj.forEach((k) => { if (!queue.includes(k)) queue.push(k); });
+            }
+        }
+        const when = new Array(n).fill(-1); order.forEach((p, k) => { when[p] = k * STEP; });
+        const total = Math.max(1, order.length) * STEP, CYCLE = total + 3.6;
+
+        const hud = hudBox(panel, '<div>DBSCAN <i>(illustrative)</i></div><div>eps <b>' + EPS + '</b> · minPts <b>' + MINPTS + '</b></div><div>clusters <b data-k="c">0</b></div><div>noise <b data-k="n">0</b></div>');
+        const kC = hud.querySelector('[data-k="c"]'), kN = hud.querySelector('[data-k="n"]');
+        rotateLabel(panel);
+        let t = 0, lastKey = '';
+
+        return {
+            draw(dt) {
+                const ctx = st.ctx, P = st.pal, cols = [P.a, P.b, P.c, P.d];
+                t += dt; if (t > CYCLE) t = 0;
+                const idx = Math.min(order.length - 1, Math.floor(t / STEP));
+                const showNoise = t > total + 0.4;
+
+                cubeWire(st, 1.25, 0.12);
+                const pp = pts.map((p) => st.project(p.x, p.y, p.z));
+
+                /* eps-neighbourhood ring around the point being expanded */
+                if (t < total && order.length) {
+                    const f = order[idx], q = pp[f];
+                    const rpx = EPS * Math.min(st.w, st.h) * st.zoom * q.s;
+                    ctx.strokeStyle = `rgba(${cols[label[f] % 3]},0.55)`; ctx.lineWidth = 1.4;
+                    ctx.beginPath(); ctx.arc(q.x, q.y, rpx, 0, TAU); ctx.stroke();
+                    ctx.fillStyle = `rgba(${cols[label[f] % 3]},0.07)`; ctx.fill();
+                }
+
+                const items = pts.map((p, i) => ({ z: pp[i].z, i }));
+                items.sort((a, b) => b.z - a.z);
+                let found = 0, noiseShown = 0;
+                items.forEach(({ i }) => {
+                    const q = pp[i], da = st.depthAlpha(q.z), done = when[i] >= 0 && t >= when[i];
+                    if (done) { disc(ctx, q, 3.4 * q.s, cols[label[i] % 3], 0.95 * da); if (label[i] + 1 > found) found = label[i] + 1; }
+                    else if (label[i] < 0 && showNoise) {
+                        noiseShown++;
+                        const r = 3.6 * q.s; ctx.strokeStyle = `rgba(${P.d},${(0.9 * da).toFixed(3)})`; ctx.lineWidth = 1.6;
+                        ctx.beginPath(); ctx.moveTo(q.x - r, q.y - r); ctx.lineTo(q.x + r, q.y + r); ctx.moveTo(q.x + r, q.y - r); ctx.lineTo(q.x - r, q.y + r); ctx.stroke();
+                    } else disc(ctx, q, 2.8 * q.s, P.dim, 0.7 * da);
+                });
+                const key = found + '/' + noiseShown;
+                if (key !== lastKey) { lastKey = key; kC.textContent = found; kN.textContent = noiseShown; }
+            }
+        };
+    }
+
+    /* ==================================================================
+       VISUAL 6 : KNN  (query point asks its k nearest neighbours)
+       ================================================================== */
+    function knnVisual(st, panel) {
+        st.zoom = 0.21;
+        const K = 5, CYCLE = 5.2, names = ['A', 'B', 'C'];
+        const cs = [[-0.7, -0.3, 0.2], [0.65, -0.4, -0.3], [0.0, 0.7, 0.5]];
+        const pts = [];
+        for (let i = 0; i < 105; i++) { const c = cs[i % 3]; pts.push({ x: c[0] + gaussR() * 0.34, y: c[1] + gaussR() * 0.34, z: c[2] + gaussR() * 0.34, k: i % 3 }); }
+
+        const hud = hudBox(panel, '<div>K-Nearest Neighbors <i>(illustrative)</i></div><div>k = <b>' + K + '</b></div><div>votes <b data-k="v">-</b></div><div>class <b data-k="c">?</b></div>');
+        const kV = hud.querySelector('[data-k="v"]'), kC = hud.querySelector('[data-k="c"]');
+        rotateLabel(panel);
+
+        let qy = null, t = 0, decidedShown = false;
+        function newQuery() {
+            const x = rand(-0.8, 0.8), y = rand(-0.7, 0.7), z = rand(-0.7, 0.7);
+            const sorted = pts.map((p) => ({ p, d: Math.hypot(p.x - x, p.y - y, p.z - z) })).sort((a, b) => a.d - b.d).slice(0, K).map((o) => o.p);
+            const votes = [0, 0, 0]; sorted.forEach((p) => votes[p.k]++);
+            let win = 0; votes.forEach((v, k) => { if (v > votes[win]) win = k; });
+            qy = { x, y, z, nb: sorted, votes, win }; t = 0; decidedShown = false;
+            kV.textContent = '-'; kC.textContent = '?';
+        }
+
+        return {
+            draw(dt) {
+                const ctx = st.ctx, P = st.pal, cols = [P.a, P.b, P.c];
+                t += dt; if (!qy || t > CYCLE) newQuery();
+                const appear = clamp(t / 0.7, 0, 1), lineP = ease(clamp((t - 0.9) / 1.1, 0, 1)), decided = t > 2.3;
+                const fade = t > CYCLE - 0.6 ? clamp((CYCLE - t) / 0.6, 0, 1) : 1;
+                if (decided && !decidedShown) { decidedShown = true; kV.textContent = qy.votes.map((v, k) => names[k] + ':' + v).join('  '); kC.textContent = names[qy.win]; }
+
+                cubeWire(st, 1.2, 0.12);
+                const pp = pts.map((p) => st.project(p.x, p.y, p.z));
+                const Q = st.project(qy.x, qy.y, qy.z);
+
+                /* lines query -> neighbours */
+                if (lineP > 0) {
+                    ctx.lineWidth = 1.4;
+                    qy.nb.forEach((p) => {
+                        const B = pp[pts.indexOf(p)];
+                        ctx.strokeStyle = `rgba(${cols[p.k]},${(0.8 * fade).toFixed(3)})`;
+                        ctx.beginPath(); ctx.moveTo(Q.x, Q.y); ctx.lineTo(Q.x + (B.x - Q.x) * lineP, Q.y + (B.y - Q.y) * lineP); ctx.stroke();
+                    });
+                }
+
+                const items = pts.map((p, i) => ({ z: pp[i].z, p, q: pp[i] }));
+                items.push({ z: Q.z - 0.02, query: true, q: Q });
+                items.sort((a, b) => b.z - a.z);
+                items.forEach((it) => {
+                    const da = st.depthAlpha(it.z), q = it.q;
+                    if (it.query) {
+                        const rgb = decided ? cols[qy.win] : P.ink, r = 8 * q.s * appear;
+                        glowDot(ctx, q.x, q.y, r, rgb, 0.8 * fade * appear);
+                        disc(ctx, q, r, rgb, 0.98 * fade * appear);
+                        ctx.strokeStyle = `rgba(${P.ink},${(0.7 * fade * appear).toFixed(3)})`; ctx.lineWidth = 1.5;
+                        ctx.beginPath(); ctx.arc(q.x, q.y, r + 4, 0, TAU); ctx.stroke();
+                    } else {
+                        const isNb = lineP > 0.6 && qy.nb.indexOf(it.p) >= 0;
+                        disc(ctx, q, (isNb ? 4.8 : 3.1) * q.s, cols[it.p.k], (isNb ? 1 : 0.8) * da);
+                        if (isNb) { ctx.strokeStyle = `rgba(${P.ink},${(0.6 * da).toFixed(3)})`; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(q.x, q.y, 7 * q.s, 0, TAU); ctx.stroke(); }
+                    }
+                });
+            }
+        };
+    }
+
+    /* ==================================================================
+       VISUAL 7 : LINEAR REGRESSION  (plane fitted by gradient descent)
+       ================================================================== */
+    function regressionVisual(st, panel) {
+        st.zoom = 0.25;
+        const TRUE = { a: 0.55, b: -0.4, c: 0.1 }, N = 70, CYCLE = 6.5, LR = 0.3, SPS = 8;
+        const pts = [];
+        for (let i = 0; i < N; i++) { const x = rand(-1, 1), y = rand(-1, 1); pts.push({ x, y, z: TRUE.a * x + TRUE.b * y + TRUE.c + gaussR() * 0.12 }); }
+
+        const hud = hudBox(panel, '<div>Linear Regression <i>(illustrative)</i></div><div>step <b data-k="s">0</b></div><div>MSE <b data-k="m">-</b></div><div>method <b>gradient descent</b></div>');
+        const kS = hud.querySelector('[data-k="s"]'), kM = hud.querySelector('[data-k="m"]');
+        rotateLabel(panel);
+
+        let w, shown, t, acc, step;
+        function reset() {
+            w = { a: rand(-0.9, 0.9), b: rand(-0.9, 0.9), c: rand(-0.7, 0.7) };
+            shown = { a: w.a, b: w.b, c: w.c }; t = 0; acc = 0; step = 0;
+        }
+        reset();
+        const mse = (p) => pts.reduce((s, q) => s + (p.a * q.x + p.b * q.y + p.c - q.z) ** 2, 0) / N;
+        function gd() {
+            let da = 0, db = 0, dc = 0;
+            pts.forEach((q) => { const e = w.a * q.x + w.b * q.y + w.c - q.z; da += 2 * e * q.x; db += 2 * e * q.y; dc += 2 * e; });
+            w.a -= LR * da / N; w.b -= LR * db / N; w.c -= LR * dc / N; step++;
+        }
+
+        return {
+            draw(dt) {
+                const ctx = st.ctx, P = st.pal;
+                t += dt; if (t > CYCLE) reset();
+                acc += dt * SPS; while (acc >= 1) { acc -= 1; if (t < CYCLE - 1.8) gd(); }
+                const k = 1 - Math.exp(-dt * 10);
+                shown.a += (w.a - shown.a) * k; shown.b += (w.b - shown.b) * k; shown.c += (w.c - shown.c) * k;
+                kS.textContent = step; kM.textContent = mse(shown).toFixed(3);
+
+                /* vertical axis = target value (so screen-up = bigger) */
+                const pos = (x, y, z) => st.project(x, -z, y);
+                cubeWire(st, 1.25, 0.12);
+
+                /* plane mesh */
+                const G = 6;
+                ctx.lineWidth = 1;
+                for (let i = 0; i <= G; i++) {
+                    const u = -1 + (2 * i) / G;
+                    const line = (fx) => {
+                        ctx.beginPath();
+                        for (let j = 0; j <= G; j++) { const v = -1 + (2 * j) / G, x = fx ? u : v, y = fx ? v : u, p = pos(x, y, shown.a * x + shown.b * y + shown.c); j ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y); }
+                        ctx.strokeStyle = `rgba(${P.a},0.55)`; ctx.stroke();
+                    };
+                    line(true); line(false);
+                }
+
+                /* residuals + points */
+                const items = pts.map((q) => ({ q, p: pos(q.x, q.y, q.z), f: pos(q.x, q.y, shown.a * q.x + shown.b * q.y + shown.c) }));
+                items.forEach((it) => { it.z = it.p.z; });
+                ctx.lineWidth = 1;
+                items.forEach((it) => { ctx.strokeStyle = `rgba(${P.d},0.35)`; ctx.beginPath(); ctx.moveTo(it.p.x, it.p.y); ctx.lineTo(it.f.x, it.f.y); ctx.stroke(); });
+                items.sort((a, b) => b.z - a.z);
+                items.forEach((it) => disc(ctx, it.p, 3.4 * it.p.s, P.c, 0.95 * st.depthAlpha(it.z)));
+            }
+        };
+    }
+
+    const VISUALS = { neuralnet: neuralNet, kmeans: kMeans, forest: forest, pca: pcaVisual, dbscan: dbscanVisual, knn: knnVisual, regression: regressionVisual };
 
     function initVisuals() {
         $$('.viz-panel').forEach((panel) => {
