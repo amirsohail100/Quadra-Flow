@@ -23,10 +23,10 @@
      status      : "live"  ya  "coming-soon"
      name, icon (Font Awesome class), category, tagline, description, tags[]
      version, install   (live ke liye)
-     home        : { hero, visual, features, pipeline, showcase, quickstart, cta }
+     home        : { hero, visual, features, pipeline, algorithms, quickstart, cta }
                    (sab optional – jo likhoge wahi section dikhega)
-                   visual   : "neuralnet" (3D neural network) – effects.js mein aur bhi add kar sakte ho
-                   showcase : { type: "kmeans", title, text }
+                   visual   : "neuralnet" (hero ka 3D neural network)
+                   algorithms : { title, subtitle, items:[{ visual, tag, title, text, steps[] }] }  (zigzag 3D section)
      docs        : { pageTitle, groups: [ { title, sections: [...] } ] }
 
    DOCS SECTION KE FIELDS (sab optional, sirf `id` + `title` zaroori hain)
@@ -133,10 +133,58 @@ const SITE_DATA = {
                     ]
                 },
 
-                showcase: {
-                    type: "kmeans",       // 3D k-means animation (effects.js)
-                    title: "Watch learning happen in 3D",
-                    text: "Machine learning is all about finding structure in data. This illustrative animation shows how points get pulled towards their cluster centres, round after round, until the groups settle."
+                /* ML algorithms 3D mein, zigzag: pehla visual LEFT, dusra RIGHT, phir LEFT, RIGHT...
+                   Naya algorithm: items mein { visual, tag, title, text, steps } add karo.
+                   visual = effects.js ke VISUALS ka naam:
+                   kmeans | forest | pca | dbscan | knn | regression | neuralnet */
+                algorithms: {
+                    title: "ML algorithms in 3D",
+                    subtitle: "Supervised, unsupervised and ensemble methods, visualised in motion.",
+                    items: [
+                        {
+                            visual: "kmeans",
+                            tag: "Unsupervised Learning",
+                            title: "K-Means Clustering",
+                            text: "Groups unlabelled data into k clusters by repeatedly assigning every point to its nearest centroid and moving each centroid to the middle of its group.",
+                            steps: ["Pick k random centroids", "Assign every point to the nearest centroid", "Move centroids to the cluster mean, repeat until stable"]
+                        },
+                        {
+                            visual: "forest",
+                            tag: "Ensemble Learning",
+                            title: "Random Forest",
+                            text: "Many decision trees, each trained on a different random sample of the data, vote on the answer. The majority wins, which is usually more accurate and stable than any single tree.",
+                            steps: ["Each tree sees a different random sample", "Every tree makes its own prediction", "The majority vote is the final prediction"]
+                        },
+                        {
+                            visual: "pca",
+                            tag: "Unsupervised \u00b7 Dimensionality Reduction",
+                            title: "Principal Component Analysis (PCA)",
+                            text: "Finds the directions along which the data varies the most and projects the data onto them, so 3D (or 300D) data can be explored in fewer dimensions while keeping most of the information.",
+                            steps: ["Find the axes of maximum variance", "Rank them as principal components", "Project the data onto the top components"]
+                        },
+                        {
+                            visual: "dbscan",
+                            tag: "Unsupervised Learning",
+                            title: "DBSCAN: Density-Based Clustering",
+                            text: "Grows clusters outwards from dense regions and marks isolated points as noise. You do not choose the number of clusters, and clusters can take any shape.",
+                            steps: ["Pick a radius (eps) and a minimum number of points", "Grow a cluster from every dense core point", "Points left over are marked as noise"]
+                        },
+                        {
+                            visual: "knn",
+                            tag: "Supervised Learning",
+                            title: "K-Nearest Neighbors (KNN)",
+                            text: "Classifies a new point by looking at its k closest labelled neighbours and taking a majority vote. There is no training step: the data itself is the model.",
+                            steps: ["Measure the distance to every labelled point", "Take the k nearest neighbours", "The majority class wins the vote"]
+                        },
+                        {
+                            visual: "regression",
+                            tag: "Supervised Learning",
+                            title: "Linear Regression",
+                            text: "Fits a line (a plane in higher dimensions) through the data by gradient descent, step by step shrinking the squared error between predictions and real values.",
+                            steps: ["Start with a random plane", "Measure the error to every point", "Nudge the plane downhill until the error stops shrinking"]
+                        }
+                        // ,{ visual: "knn", tag: "...", title: "...", text: "...", steps: ["...", "..."] }
+                    ]
                 },
 
                 quickstart: {
