@@ -2,13 +2,13 @@
 function copyCodeBlock(button) {
     const codeWindow = button.closest('.code-window');
     const codeText = codeWindow.querySelector('pre code').innerText;
-    
+
     navigator.clipboard.writeText(codeText).then(() => {
         const originalHTML = button.innerHTML;
         button.innerHTML = '<i class="fa-solid fa-check"></i> Copied!';
         button.style.backgroundColor = '#10b981';
         button.style.color = '#ffffff';
-        
+
         setTimeout(() => {
             button.innerHTML = originalHTML;
             button.style.backgroundColor = '';
@@ -27,16 +27,25 @@ function copyInstallCmd(button) {
     setTimeout(() => toast.classList.remove("show"), 2000);
 }
 
-// Dark / Light Theme Toggle Setup
+// Dark / Light Theme Toggle Setup (choice saved, taaki saare pages par same theme rahe)
+const THEME_KEY = 'quadraflow-theme';
 const themeToggleBtn = document.getElementById('themeToggleBtn');
 const themeIcon = themeToggleBtn.querySelector('i');
 
+function applyTheme(theme) {
+    document.body.setAttribute('data-theme', theme);
+    themeIcon.className = theme === 'dark' ? 'fa-solid fa-moon' : 'fa-solid fa-sun';
+}
+
+try {
+    const saved = localStorage.getItem(THEME_KEY);
+    if (saved === 'light' || saved === 'dark') applyTheme(saved);
+} catch (e) { /* storage blocked – default dark */ }
+
 themeToggleBtn.addEventListener('click', () => {
-    const currentTheme = document.body.getAttribute('data-theme');
-    const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-    
-    document.body.setAttribute('data-theme', newTheme);
-    themeIcon.className = newTheme === 'dark' ? 'fa-solid fa-moon' : 'fa-solid fa-sun';
+    const newTheme = document.body.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    applyTheme(newTheme);
+    try { localStorage.setItem(THEME_KEY, newTheme); } catch (e) { /* ignore */ }
 });
 
 // Interactive Particle Background Canvas
@@ -86,7 +95,7 @@ for (let i = 0; i < particleCount; i++) {
 function animate() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     const isDark = document.body.getAttribute('data-theme') === 'dark';
-    
+
     for (let i = 0; i < particles.length; i++) {
         particles[i].update();
         particles[i].draw();
@@ -100,8 +109,8 @@ function animate() {
                 ctx.beginPath();
                 ctx.moveTo(particles[i].x, particles[i].y);
                 ctx.lineTo(particles[j].x, particles[j].y);
-                ctx.strokeStyle = isDark 
-                    ? `rgba(56, 189, 248, ${0.12 - dist / 1000})` 
+                ctx.strokeStyle = isDark
+                    ? `rgba(56, 189, 248, ${0.12 - dist / 1000})`
                     : `rgba(2, 132, 199, ${0.1 - dist / 1000})`;
                 ctx.lineWidth = 0.8;
                 ctx.stroke();
@@ -110,4 +119,4 @@ function animate() {
     }
     requestAnimationFrame(animate);
 }
-animate();
+animate();
