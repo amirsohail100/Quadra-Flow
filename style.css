@@ -723,3 +723,24 @@ a.version:hover { background: var(--accent-glow); transform: translateY(-1px); }
     .install-box code { font-size: 0.82rem; }
     .install-box .toast { right: 0; top: -34px; }
 }
+
+/* ---------- Algorithms section: zigzag rows (left / right slide-in) ---------- */
+#algorithms { overflow-x: clip; }
+.reveal-left { transform: translateX(-80px); }
+.reveal-right { transform: translateX(80px); }
+.reveal.in { transform: none; }
+@media (max-width: 1023px) { .reveal-left { transform: translateX(-30px); } .reveal-right { transform: translateX(30px); } }
+
+.algo-num { font-family: 'Fira Code', monospace; font-size: 1.6rem; font-weight: 700; color: var(--accent); line-height: 1; }
+.algo-steps { list-style: none; counter-reset: step; display: grid; gap: 0.6rem; text-align: left; max-width: 34rem; margin: 0 auto; }
+@media (min-width: 1024px) { .algo-steps { margin-left: 0; } }
+.algo-steps li { counter-increment: step; position: relative; padding: 0.6rem 0.9rem 0.6rem 3rem; border-radius: 12px; font-size: 0.92rem; background: var(--card-bg); border: 1px solid var(--border-color); color: var(--text-main); transition: border-color 0.25s, transform 0.25s; }
+.algo-steps li:hover { border-color: var(--accent); transform: translateX(4px); }
+.algo-steps li::before { content: counter(step); position: absolute; left: 0.8rem; top: 50%; transform: translateY(-50%); width: 1.6rem; height: 1.6rem; border-radius: 50%; display: grid; place-items: center; font-size: 0.78rem; font-weight: 700; color: var(--on-accent); background: var(--accent); }
+.algo-note { margin-top: 1rem; font-size: 0.72rem; color: var(--text-muted); opacity: 0.8; }
+
+/* ---------- Navbar: 7 links wala library page tight na lage ---------- */
+@media (max-width: 1180px) and (min-width: 761px) {
+    .nav-links { gap: 1rem; font-size: 0.88rem; }
+    .logo .version { display: none; }
+}
