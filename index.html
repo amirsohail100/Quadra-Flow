@@ -3,9 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QuadraFlow</title> <!-- Final title data.js se set hota hai -->
+    <title>Quadra Flow</title> <!-- Final title data.js se set hota hai -->
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Tailwind CSS (Play CDN) -->
+    <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+    <script src="tailwind.config.js"></script>
 </head>
 <body data-theme="dark">
 
@@ -16,23 +19,21 @@
         <i class="fa-solid fa-moon"></i>
     </button>
 
-    <!-- Navbar (content: data.js -> site, nav) -->
+    <!-- Navbar (content: data.js -> site, libraries) -->
     <nav class="navbar-container" id="navbarRoot"></nav>
 
-    <!-- Hero Section (content: data.js -> home.hero) -->
-    <header class="hero" id="heroRoot"></header>
+    <!-- Hero (content: data.js -> hub.hero) -->
+    <header id="hubHero" class="hero-zone"></header>
 
-    <!-- Features (content: data.js -> home.features) -->
-    <section id="features" class="features"></section>
-
-    <!-- Code Quickstart (content: data.js -> home.quickstart) -->
-    <section id="quickstart" class="code-section"></section>
+    <!-- Library cards (content: data.js -> libraries[]) -->
+    <section id="libraries"></section>
 
     <!-- Footer (content: data.js -> site.footer) -->
     <footer id="siteFooter"></footer>
 
     <script src="data.js"></script>
     <script src="render.js"></script>
+    <script src="effects.js"></script>
     <script src="script.js"></script>
 </body>
 </html>
