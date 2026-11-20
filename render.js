@@ -129,6 +129,7 @@
             if (PAGE === 'library') {
                 if (h.features) items.push({ label: 'Features', href: libHref(lib, '#features') });
                 if (h.pipeline) items.push({ label: 'Pipeline', href: libHref(lib, '#pipeline') });
+                if (h.algorithms) items.push({ label: 'Algorithms', href: libHref(lib, '#algorithms') });
                 if (h.quickstart) items.push({ label: 'Quickstart', href: libHref(lib, '#quickstart') });
             }
         }
@@ -300,7 +301,7 @@
                     <div class="reveal" style="--d:240ms">${installBox(lib.install)}</div>
                     <div class="reveal mt-8 flex flex-wrap justify-center gap-3 lg:justify-start" style="--d:320ms">
                         ${lib.docs ? `<a class="btn btn-primary" href="${esc(docsHref(lib))}"><i class="fa-solid fa-book-open"></i> Read the Docs</a>` : ''}
-                        <a class="btn btn-ghost" href="${h.showcase ? '#showcase' : '#features'}"><i class="fa-solid fa-play"></i> See it in action</a>
+                        <a class="btn btn-ghost" href="${h.algorithms ? '#algorithms' : '#features'}"><i class="fa-solid fa-play"></i> See it in action</a>
                     </div>
                 </div>
                 <div class="reveal" style="--d:200ms">${h.visual ? vizPanel(h.visual) : orbitScene()}</div>
@@ -346,18 +347,33 @@
                 </div>`);
         } else { const el = $('pipeline'); if (el) el.remove(); }
 
-        /* showcase (3D visual + text) */
-        if (h.showcase) {
-            mount('showcase', `
-                <div class="mx-auto grid max-w-6xl grid-cols-1 items-center gap-12 px-[8%] py-20 lg:grid-cols-[0.9fr_1.1fr]">
-                    <div class="reveal text-center lg:text-left">
-                        <span class="doc-badge">Illustrative 3D animation</span>
-                        <h2 class="mb-4 text-3xl font-extrabold tracking-tight sm:text-4xl">${esc(h.showcase.title)}</h2>
-                        <p class="text-lg text-[color:var(--text-muted)]">${esc(h.showcase.text)}</p>
+        /* algorithms : zigzag rows (visual LEFT, then RIGHT, then LEFT ...) */
+        if (h.algorithms) {
+            const A = h.algorithms;
+            mount('algorithms', `
+                <div class="mx-auto max-w-6xl px-[8%] py-20">
+                    ${sectionHead(A.title, A.subtitle)}
+                    <div class="flex flex-col gap-20 lg:gap-28">
+                        ${A.items.map((it, i) => {
+                            const left = i % 2 === 0;            // true => visual left, text right
+                            return `
+                        <div class="algo-row grid grid-cols-1 items-center gap-8 lg:grid-cols-2 lg:gap-16">
+                            <div class="reveal ${left ? 'reveal-left' : 'reveal-right lg:order-2'}">${vizPanel(it.visual)}</div>
+                            <div class="reveal ${left ? 'reveal-right' : 'reveal-left lg:order-1'} text-center lg:text-left" style="--d:140ms">
+                                <div class="mb-4 flex flex-wrap items-center justify-center gap-3 lg:justify-start">
+                                    <span class="algo-num">${String(i + 1).padStart(2, '0')}</span>
+                                    <span class="doc-badge" style="margin:0">${esc(it.tag || '')}</span>
+                                </div>
+                                <h3 class="mb-3 text-2xl font-extrabold tracking-tight sm:text-3xl">${esc(it.title)}</h3>
+                                <p class="mb-5 text-[color:var(--text-muted)]">${esc(it.text)}</p>
+                                ${(it.steps && it.steps.length) ? `<ol class="algo-steps">${it.steps.map((s) => `<li>${esc(s)}</li>`).join('')}</ol>` : ''}
+                                <p class="algo-note">Illustrative 3D animation</p>
+                            </div>
+                        </div>`;
+                        }).join('')}
                     </div>
-                    <div class="reveal" style="--d:150ms">${vizPanel(h.showcase.type)}</div>
                 </div>`);
-        } else { const el = $('showcase'); if (el) el.remove(); }
+        } else { const el = $('algorithms'); if (el) el.remove(); }
 
         /* quickstart */
         if (h.quickstart) {
