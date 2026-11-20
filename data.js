@@ -1,98 +1,149 @@
 /* ==========================================================================
-   QuadraFlow – SITE DATA
+   QUADRA FLOW – SITE DATA
    --------------------------------------------------------------------------
-   Poori website ka content yahin se aata hai. HTML ya CSS touch karne ki
+   Poori website ka content yahin se aata hai. HTML / CSS touch karne ki
    zaroorat nahi: yahan naya item add karo, UI apne aap ban jayegi.
 
-   QUICK GUIDE
-   - Naya feature card      -> home.features.items mein ek { icon, title, text } add karo
-   - Naya nav link          -> nav array mein { label, href } add karo
-   - Naya docs sidebar group-> docs.groups mein ek { title, sections: [...] } add karo
-   - Naya docs page/section -> kisi group ke `sections` mein ek object add karo
+   SITE KA STRUCTURE
+     index.html                 -> Quadra Flow HOME (saari libraries ke cards)
+     library.html?lib=<id>      -> kisi ek library ka HOME page (3D animation wala)
+     docs.html?lib=<id>         -> us library ke DOCS
+
+   NAYI LIBRARY KAISE ADD KARNI HAI  (sabse zaroori)
+   1. `libraries` array mein ek naya object add karo (neeche OmniLearn ka
+      poora example hai, usse copy karke badal do).
+   2. Jab tak library ready nahi hai: status: "coming-soon" rakho.
+      Home par card ke andar "Coming Soon" button dikhega.
+   3. Jab library ready ho: status: "live" kar do aur `version`, `install`,
+      `home` aur `docs` bhar do. Bas! Card ka button apne aap
+      "Explore <name>" ban jayega aur usse library.html / docs.html khulega.
+
+   LIBRARY KE FIELDS
+     id          : URL mein use hota hai (library.html?lib=omnilearn) – unique, chhota, no spaces
+     status      : "live"  ya  "coming-soon"
+     name, icon (Font Awesome class), category, tagline, description, tags[]
+     version, install   (live ke liye)
+     home        : { hero, visual, features, pipeline, showcase, quickstart, cta }
+                   (sab optional – jo likhoge wahi section dikhega)
+                   visual   : "neuralnet" (3D neural network) – effects.js mein aur bhi add kar sakte ho
+                   showcase : { type: "kmeans", title, text }
+     docs        : { pageTitle, groups: [ { title, sections: [...] } ] }
 
    DOCS SECTION KE FIELDS (sab optional, sirf `id` + `title` zaroori hain)
-     id          : anchor id (URL mein #id banega, unique rakho)
-     title       : section ka heading
-     label       : sidebar mein dikhne wala naam (na do to `title` hi use hoga)
-     description : heading ke neeche ek line
-     paragraphs  : ["text", "text"]   (`backticks` se inline code ban jata hai)
-     command     : "pip install ..."  (copy button wala install box)
-     badge       : chhota tag, jaise "Machine Learning & AI"
-     params      : [{ name, type, description }]  -> Parameters table
-     returns     : { type, description }          -> Returns line
-     code        : { filename, source }  ya  [ {..}, {..} ] -> code window(s)
+     id, title, label (sidebar naam), description, paragraphs[], command,
+     badge, params[{name,type,description}], returns{type,description},
+     code {filename, source}  ya  [ {..}, {..} ]
 
    CODE SNIPPET LIKHNE KE RULES
-   - Code ko String.raw`...` ke andar likho (backslash safe rehte hain).
+   - Code ko String.raw`...` ke andar likho.
    - Code ke andar backtick ( ` ) ya ${ use mat karo.
-   - Syntax highlight (keyword / string / comment) JS apne aap karta hai,
-     <span> likhne ki zaroorat nahi.
+   - Syntax highlight JS apne aap karta hai.
    ========================================================================== */
 
 const SITE_DATA = {
 
     /* ---------- Brand / global ---------- */
     site: {
-        name: "QuadraFlow",
+        name: "Quadra Flow",                       // pehla shabd white, baaki gradient mein dikhta hai
         logoIcon: "fa-solid fa-layer-group",
-        badge: "OmniLearn v1.0.0",            // navbar ke logo ke saath chhota tag
-        footer: "QuadraFlow • Released under the MIT License. Designed for Python Developers.",
+        footer: "Quadra Flow • Released under the MIT License. Designed for Python Developers.",
         links: {
             github: "https://github.com",
             portfolio: "https://yourportfolio.com"
         }
     },
 
-    /* ---------- Navbar links ---------- */
-    nav: [
-        { label: "Features",   href: "index.html#features" },
-        { label: "Quickstart", href: "index.html#quickstart" },
-        { label: "Docs",       href: "docs.html" }
-    ],
-
-    /* ---------- Library info (QuadraFlow ke andar ki Python library) ---------- */
-    library: {
-        name: "OmniLearn",
-        install: "pip install omnilearn"
-    },
-
-    /* ---------- Home page (index.html) ---------- */
-    home: {
-        pageTitle: "QuadraFlow - OmniLearn: Fast & Intuitive Python Framework",
+    /* ---------- Quadra Flow HOME page (index.html) ---------- */
+    hub: {
+        pageTitle: "Quadra Flow - Python Libraries for AI & Web Services",
 
         hero: {
-            badge: "🚀 Production Ready Python Framework",
-            title: "Build Lightning Fast AI & Web Services",
-            subtitle: "A modern, high-performance Python library designed for developer productivity and seamless scalability."
+            badge: "🚀 Production Ready Python Libraries",
+            kicker: "Python libraries for",
+            words: ["AI & ML", "Data Pipelines", "Web Services", "REST APIs"],   // typing animation
+            subtitle: "Quadra Flow is a growing family of modern, high-performance Python libraries designed for developer productivity and seamless scalability.",
+            primaryCta: "Explore Libraries",
+            secondaryCta: "Read the Docs"
         },
 
-        features: {
-            title: "Why Choose OmniLearn?",
-            items: [
-                {
-                    icon: "fa-solid fa-bolt",
-                    title: "High Performance",
-                    text: "Asynchronous core built with high-throughput architecture for fast execution."
-                },
-                {
-                    icon: "fa-solid fa-brain",
-                    title: "ML & AI Native",
-                    text: "Out-of-the-box support for TensorFlow, Scikit-Learn, NumPy, and Pandas workloads."
-                },
-                {
-                    icon: "fa-solid fa-plug",
-                    title: "Easy Integration",
-                    text: "Seamlessly host data pipelines, machine learning predictions, and REST APIs."
-                }
-                // ,{ icon: "fa-solid fa-shield", title: "Naya Feature", text: "Yahan likho..." }
-            ]
-        },
+        libraries: {
+            title: "Our Libraries",
+            subtitle: "Pick a library to explore its home page and documentation."
+        }
+    },
 
-        quickstart: {
-            title: "Quickstart Example",
-            description: "Get up and running with data workflows in seconds.",
-            filename: "quickstart.py",
-            source: String.raw`
+    /* ---------- LIBRARIES ---------- */
+    libraries: [
+
+        /* ============================ 1) OmniLearn ============================ */
+        {
+            id: "omnilearn",
+            status: "live",
+            name: "OmniLearn",
+            version: "v1.0.0",
+            icon: "fa-solid fa-brain",
+            category: "Machine Learning & AI",
+            tagline: "Fast & intuitive machine learning pipelines",
+            description: "A modern, high-performance Python library for machine learning pipelines, data processing and dynamic model initialization.",
+            tags: ["Python", "ML & AI", "Pipelines"],
+            install: "pip install omnilearn",
+
+            /* ----- OmniLearn HOME page (library.html?lib=omnilearn) ----- */
+            home: {
+                pageTitle: "OmniLearn by Quadra Flow - Fast & Intuitive Python Framework",
+
+                hero: {
+                    badge: "🚀 Production Ready Python Framework",
+                    title: "Build Lightning Fast AI & Web Services",
+                    subtitle: "A modern, high-performance Python library designed for developer productivity and seamless scalability."
+                },
+
+                visual: "neuralnet",     // hero ke right side mein 3D neural network
+
+                features: {
+                    title: "Why Choose OmniLearn?",
+                    items: [
+                        {
+                            icon: "fa-solid fa-bolt",
+                            title: "High Performance",
+                            text: "Asynchronous core built with high-throughput architecture for fast execution."
+                        },
+                        {
+                            icon: "fa-solid fa-brain",
+                            title: "ML & AI Native",
+                            text: "Out-of-the-box support for TensorFlow, Scikit-Learn, NumPy, and Pandas workloads."
+                        },
+                        {
+                            icon: "fa-solid fa-plug",
+                            title: "Easy Integration",
+                            text: "Seamlessly host data pipelines, machine learning predictions, and REST APIs."
+                        }
+                        // ,{ icon: "fa-solid fa-shield", title: "Naya Feature", text: "Yahan likho..." }
+                    ]
+                },
+
+                pipeline: {
+                    title: "From raw data to a trained model",
+                    subtitle: "The OmniLearn workflow in four steps.",
+                    steps: [
+                        { icon: "fa-solid fa-database",    title: "Bring your data",   text: "Pass a DataFrame or NumPy array as input, with a target field or array.",     code: "data, target = X, y" },
+                        { icon: "fa-solid fa-sliders",     title: "Auto-scale",        text: "Internal feature scaling is applied for you when auto_scale is on.",         code: "ol.Model(auto_scale=True)" },
+                        { icon: "fa-solid fa-diagram-project", title: "Fit the model", text: "One call trains the model across the whole workflow.",                       code: "model.fit(data, target)" },
+                        { icon: "fa-solid fa-cube",        title: "Get an OmniModel",  text: "You get back a configured and optimized model instance, ready to use.",      code: "return model  # OmniModel" }
+                    ]
+                },
+
+                showcase: {
+                    type: "kmeans",       // 3D k-means animation (effects.js)
+                    title: "Watch learning happen in 3D",
+                    text: "Machine learning is all about finding structure in data. This illustrative animation shows how points get pulled towards their cluster centres, round after round, until the groups settle."
+                },
+
+                quickstart: {
+                    title: "Quickstart Example",
+                    description: "Get up and running with data workflows in seconds.",
+                    filename: "quickstart.py",
+                    source: String.raw`
 import omnilearn as ol
 import numpy as np
 
@@ -107,51 +158,57 @@ def process_data():
 if __name__ == "__main__":
     app.run()
 `
-        }
-    },
+                },
 
-    /* ---------- Docs page (docs.html) ---------- */
-    docs: {
-        pageTitle: "QuadraFlow Docs - OmniLearn Documentation",
+                cta: {
+                    title: "Ready to build with OmniLearn?",
+                    text: "Installation, the core pipeline and every parameter are covered in the docs.",
+                    button: "Open the Docs"
+                }
+            },
 
-        groups: [
-            {
-                title: "Getting Started",
-                sections: [
+            /* ----- OmniLearn DOCS page (docs.html?lib=omnilearn) ----- */
+            docs: {
+                pageTitle: "OmniLearn Docs - Quadra Flow",
+
+                groups: [
                     {
-                        id: "installation",
-                        title: "Installation",
-                        paragraphs: ["OmniLearn requires Python 3.8+. Install via pip:"],
-                        command: "pip install omnilearn"
+                        title: "Getting Started",
+                        sections: [
+                            {
+                                id: "installation",
+                                title: "Installation",
+                                paragraphs: ["OmniLearn requires Python 3.8+. Install via pip:"],
+                                command: "pip install omnilearn"
+                            },
+                            {
+                                id: "omnilearn-core",
+                                title: "Core Overview",
+                                paragraphs: [
+                                    "OmniLearn is the Python library from Quadra Flow for high-level machine learning processing, pipeline execution, and dynamic model initialization.",
+                                    "Start with the `OmniLearn Pipeline` section below to see how a model is configured, trained, and returned."
+                                ]
+                            }
+                        ]
                     },
                     {
-                        id: "omnilearn-core",
-                        title: "Core Overview",
-                        paragraphs: [
-                            "OmniLearn is the Python library from QuadraFlow for high-level machine learning processing, pipeline execution, and dynamic model initialization.",
-                            "Start with the `OmniLearn Pipeline` section below to see how a model is configured, trained, and returned."
-                        ]
-                    }
-                ]
-            },
-            {
-                title: "Core Module",
-                sections: [
-                    {
-                        id: "omnilearn-snippet",
-                        label: "OmniLearn Pipeline",
-                        title: "OmniLearn Core Pipeline",
-                        description: "High-level machine learning processing, pipeline execution, and dynamic model initialization.",
-                        badge: "Machine Learning & AI",
-                        params: [
-                            { name: "data",       type: "pd.DataFrame / np.ndarray", description: "Input dataset array or frame." },
-                            { name: "target",     type: "str / np.ndarray",          description: "Target field or array for training predictions." },
-                            { name: "auto_scale", type: "bool",                      description: "Applies internal feature scaling when set to True (Default: True)." }
-                        ],
-                        returns: { type: "OmniModel", description: "Configured and optimized model instance." },
-                        code: {
-                            filename: "omnilearn_demo.py",
-                            source: String.raw`
+                        title: "Core Module",
+                        sections: [
+                            {
+                                id: "omnilearn-snippet",
+                                label: "OmniLearn Pipeline",
+                                title: "OmniLearn Core Pipeline",
+                                description: "High-level machine learning processing, pipeline execution, and dynamic model initialization.",
+                                badge: "Machine Learning & AI",
+                                params: [
+                                    { name: "data",       type: "pd.DataFrame / np.ndarray", description: "Input dataset array or frame." },
+                                    { name: "target",     type: "str / np.ndarray",          description: "Target field or array for training predictions." },
+                                    { name: "auto_scale", type: "bool",                      description: "Applies internal feature scaling when set to True (Default: True)." }
+                                ],
+                                returns: { type: "OmniModel", description: "Configured and optimized model instance." },
+                                code: {
+                                    filename: "omnilearn_demo.py",
+                                    source: String.raw`
 import omnilearn as ol
 
 def run_pipeline(data, target, auto_scale=True):
@@ -166,12 +223,28 @@ def run_pipeline(data, target, auto_scale=True):
 model = run_pipeline(X, y)
 print("OmniLearn Model Trained Successfully!")
 `
-                        }
+                                }
+                            }
+                            // ,{ id: "naya-section", title: "Naya Section", paragraphs: ["..."] }
+                        ]
                     }
-                    // ,{ id: "naya-section", title: "Naya Section", paragraphs: ["..."] }
+                    // ,{ title: "Naya Group", sections: [ ... ] }
                 ]
             }
-            // ,{ title: "Naya Group", sections: [ ... ] }
-        ]
-    }
+        },
+
+        /* ====================== 2) Next library (abhi Coming Soon) ======================
+           Jab ready ho: status ko "live" karo, name/icon/tagline badlo, aur
+           version, install, home, docs bhar do (OmniLearn wale block jaisa).      */
+        {
+            id: "next-library",
+            status: "coming-soon",
+            name: "Next Library",
+            icon: "fa-solid fa-hourglass-half",
+            category: "New Library",
+            tagline: "Something new is on the way",
+            description: "Another Python library from Quadra Flow is in the works. Stay tuned for the launch.",
+            tags: ["Python", "Coming Soon"]
+        }
+    ]
 };
